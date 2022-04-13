@@ -1,46 +1,35 @@
-# Getting Started with Create React App
+# Socket.io-client
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+> [socket.io](https://socket.io/) Client available as a gui to test server's
 
-## Available Scripts
+### Features & Tools used
 
-In the project directory, you can run:
+* Gui powered by [mui](https://mui.com/)
+* Reconnection support
+* modify options to be passed in the io connect call
+* [react-codemirror](https://uiwjs.github.io/react-codemirror/) is used for config editing and viewing data
+* Emit and receive (listen to events) data in real time
 
-### `npm start`
+### Usage
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+> For a normal user the online version is available
 
-The page will reload if you make edits.\
-You will also see any lint errors in the console.
+> 
 
-### `npm test`
+### Installation
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+* First clone the repo to your local machine
+* Then run `npm install`
+* Then run `npm run start` or `npm run build` depending on wether you want to develop the app or just build a local version
 
-### `npm run build`
+### 3rd party dependencies
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+* [@codemirror/lang-json](https://www.npmjs.com/package/@codemirror/lang-json)
+* [@mui/icons-material](https://www.npmjs.com/package/@mui/icons-material)
+* [@mui/material](https://www.npmjs.com/package/@mui/material)
+* [@uiw/react-codemirror](https://www.npmjs.com/package/@uiw/react-codemirror)
+* [react](https://www.npmjs.com/package/react)
+* [socket.io-client](https://www.npmjs.com/package/socket.io-client)
+* [typescript](https://www.npmjs.com/package/typescript)
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
-
-### `npm run eject`
-
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
-
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
-
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
-
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
-
-## Learn More
-
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
