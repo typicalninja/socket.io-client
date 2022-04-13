@@ -46,7 +46,7 @@ class App extends React.Component {
       error: null,
       uri: localStorage.getItem('uri') || null,
       ioOptions: {
-        transports: ['websocket', 'polling'],
+        transports: ['polling', 'websocket'],
         timeout: 10000,
         forceNew: true,
         reconnection: true,
@@ -68,7 +68,7 @@ class App extends React.Component {
     }
     else {
       const options = {
-        transports: ['websocket', 'polling'],
+        transports: ['polling', 'websocket'],
         timeout: 10000,
         forceNew: true,
         reconnection: true,
