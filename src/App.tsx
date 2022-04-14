@@ -104,10 +104,13 @@ class App extends React.Component {
   connect() {
     const options = this.state.ioOptions
     if(!this.state.uri) return "No Connection uri"
-    this.setState({
-      status: CONN_STATES.CONNECTING
-    })
     const socket = io(this.state.uri, options)
+    this.setState({
+      status: CONN_STATES.CONNECTING,
+      connectionData: {
+        socket: socket,
+      }
+    })
     socket.on('connect', () => {
       this.setState({
         status: CONN_STATES.CONNECTED,
@@ -135,7 +138,10 @@ class App extends React.Component {
       try {
         this.state.connectionData.socket.removeAllListeners();
         this.state.connectionData.socket.disconnect()
-      } catch { }
+        console.log(`MAIN :: disconnecting socket ${this.state.connectionData.socketID} and removing listeners`)
+      } catch(e) {
+        console.log("MAIN :: error_OnBack :: error removing listeners", e)
+       }
     }
     this.setState({
       status: CONN_STATES.IDLE,
