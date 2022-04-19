@@ -20,12 +20,17 @@ import AccordionDetails from "@mui/material/AccordionDetails";
 import AccordionSummary from "@mui/material/AccordionSummary";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import DeleteOutlinedIcon from '@mui/icons-material/DeleteOutlined';
+import Tooltip from '@mui/material/Tooltip';
+import HelpCenterIcon from '@mui/icons-material/HelpCenter';
 
 import CodeMirror from "@uiw/react-codemirror";
 import { json } from "@codemirror/lang-json";
 
 import AddIcon from "@mui/icons-material/Add";
 import { Socket } from "socket.io-client";
+import { stringify } from "querystring";
+
+import { nanoid } from 'nanoid'
 
 const tryAndNull = (fn: () => any, async: boolean) => {
 	if(!async) {
@@ -95,11 +100,13 @@ export default function Connection(props: State) {
   const [currentTab, setCurrentTab] = React.useState(0);
 
   const [listeningEvents, setListeningEvents] = React.useState<
-    { eventName: string; logged: { message: string; time: number }[] }[]
+    { eventName: string; hidden: boolean; id: string; logged: { message: string; time: number }[] }[]
   >([]);
   const [emittedEvents, setEmittedEvents] = React.useState<
     { eventName: string; type: string; emitData: string; spreadData: boolean }[]
   >([]);
+
+  const [hiddenEventsView, setHiddenEventsView] = React.useState(false);
 
   React.useEffect(() => {
 	// load events from local storage 
@@ -158,6 +165,7 @@ export default function Connection(props: State) {
           <ListenTab
             emittingEvent={{ setListeningEvents, listeningEvents }}
             socket={props.connectionData.socket}
+            hiddenEventsView={{ setHiddenEventsView, hiddenEventsView }}
           />
         )}
       </TabPanel>
@@ -195,12 +203,13 @@ function EmitTab(props: {
   const [events, setEvents] = React.useState<
     { eventName: string; type: string; emitData: string; spreadData: boolean }[]
   >(props.listeningEvent.emittedEvents || []);
-  const [inspector, setInspector] = React.useState({
+  const [inspector, setInspector] = React.useState<{ event: string; data: string; type: string; open: boolean; spreadData: boolean; error: null | string }>({
     event: "",
     data: "",
     type: "JSON",
     open: false,
-    spreadData: true
+    spreadData: true,
+    error: null,
   });
 
   const onAddEvent = () => {
@@ -455,6 +464,7 @@ function EmitTab(props: {
                           type: event.type,
                           open: true,
                           spreadData: event.spreadData,
+                          error: null
                         });
                       }}
                     >
@@ -484,15 +494,63 @@ function EmitTab(props: {
                 value={inspector.data}
                 height="150px"
                 theme="dark"
-                editable={false}
+                //editable={false}
                 extensions={[json()]}
+                onChange={(value) => {
+                  console.log(`Event data change`)
+                  if(inspector.type === 'JSON') {
+                    const check = tryAndNull(() => JSON.parse(value), false);
+                    if(!check) return setInspector({...inspector, data: value, error: 'Invalid Json Data'});
+                  }
+                  setInspector((prev) => ({ ...prev, data: value, error: null }));
+                  // set event data into events
+                  setEvents((prev) =>
+                    prev.map((e) =>
+                      e.eventName === inspector.event
+                        ? { ...e, emitData: value }
+                        : e
+                    )
+                  );
+                  props.listeningEvent.setEmittedEvents((prev: any[]) => {
+                    return prev.map((e:any) =>
+                      e.eventName === inspector.event
+                        ? { ...e, emitData: value }
+                        : e
+                    );
+                  });
+                  const storedEvents = localStorage.getItem("emittedEvents");
+                  if (storedEvents) {
+                    try {
+                      const d = JSON.parse(storedEvents);
+                      const c = d.map((e: { eventName: string }) => {
+                        if (e.eventName === inspector.event) {
+                          return {
+                            ...e,
+                            emitData: value,
+                          };
+                        }
+                        return e;
+                      });
+                      localStorage.setItem(
+                        "emittedEvents",
+                        JSON.stringify(c)
+                      );
+
+                    } catch {}
+                  }
+                }}
               />
+             {
+               inspector.error &&
+               <Typography color="error">{inspector.error}</Typography>
+             }
             </Stack>
           </DialogContent>
           <DialogActions>
             <Button
-              onClick={() => setInspector({ ...inspector, open: false })}
-              color="primary"
+              onClick={() => {
+                setInspector({ ...inspector, open: false });
+              }}
             >
               Close
             </Button>
@@ -501,11 +559,14 @@ function EmitTab(props: {
       </Stack>
     </Box>
   );
-}
+};
+
+
 
 function ListenTab({
   socket,
   emittingEvent,
+  hiddenEventsView: { setHiddenEventsView: setHidden, hiddenEventsView: viewHidden },
 }: {
   socket: Socket;
   emittingEvent: {
@@ -513,20 +574,27 @@ function ListenTab({
     listeningEvents: {
       eventName: string;
       logged: { message: string; time: number }[];
+      hidden: boolean;
+      id: string
     }[];
   };
+  hiddenEventsView: {
+    setHiddenEventsView: any,
+    hiddenEventsView: boolean
+  }
 }) {
-  const [listening, setListening] = React.useState<
-    { eventName: string; logged: { message: string; time: number }[] }[]
-  >(emittingEvent.listeningEvents || []);
   const [ListeningEventInspector, setListeningEvent] = React.useState<{
     event: string;
     open: boolean;
     logged: { message: string; time: number }[];
+    hidden: boolean;
+    id: string;
   }>({
     event: "",
     open: false,
     logged: [],
+    hidden: false,
+    id: ''
   });
 
   const [newListen, setNewListen] = React.useState({
@@ -540,106 +608,63 @@ function ListenTab({
     };
 
   const onAddListener = () => {
+    if (!newListen.eventName || newListen.eventName === "") return alert("Please enter an event name");
+    if(emittingEvent.listeningEvents.find((e) => (e.eventName === newListen.eventName && e.hidden === false))) return alert("Event already exists");
     console.log(`Added event listener: ${newListen.eventName}`);
-    if (!newListen.eventName || newListen.eventName === "")
-      return alert("Please enter an event name");
-    setListening((prev) => [
-      ...prev,
-      { eventName: newListen.eventName, logged: [] },
-    ]);
+    const eventID = nanoid();
     emittingEvent.setListeningEvents(
       (
         prev: {
           eventName: string;
           logged: { message: string; time: number }[];
+          hidden: boolean;
+          id: string;
         }[]
-      ) => [...prev, { eventName: newListen.eventName, logged: [] }]
+      ) => [...prev.filter((e) => (e.hidden && e.eventName === newListen.eventName)), { eventName: newListen.eventName, logged: [], hidden: false, id: eventID }]
     );
-    socket.on(newListen.eventName, (...data) => {
-      console.log(`Received event: ${newListen.eventName} :: `, ...data);
-      const c = (
-        prev: {
-          eventName: string;
-          logged: { message: string; time: number }[];
-        }[]
-      ) => {
-        return prev.map((e) => {
-          if (e.eventName === newListen.eventName) {
+    	// update the local storage
+    const old = JSON.parse(localStorage.getItem("listeningEvents") || "[]");
+    localStorage.setItem(
+      "listeningEvents",
+      JSON.stringify([...old?.filter((e: any) => (e.hidden && e.eventName === newListen.eventName)), { eventName: newListen.eventName, logged: [], hidden: false, id: eventID }])
+    );
+    setNewListen({ eventName: "" });
+  };
+
+React.useEffect(() => {
+	console.log(`Pre Loading events: ${emittingEvent.listeningEvents.length}`)
+  void socket.offAny();
+  socket.onAny((event: string, ...data: any[]) => {
+    console.log(`Received event: ${event}`, data);
+    if (emittingEvent.listeningEvents.filter((e) => e.eventName === event).length === 0) {
+      const eventID = nanoid();
+      emittingEvent.setListeningEvents((prev: {
+        eventName: string;
+        logged: { message: string; time: number }[];
+        hidden: boolean;
+        id: string
+      }[]) => [...prev, { eventName: event, logged: [{ message: JSON.stringify(data), time: Date.now() }], hidden: true, id: eventID }]);
+    }
+    else {
+      const commonSetter = (prev: any) => {
+        return prev.map((e: { logged: any; eventName: string }) => {
+          if (e.eventName === event) {
             return {
               ...e,
               logged: [
                 ...e.logged,
-                { message: JSON.stringify(data), time: Date.now() },
+                { message: `${data.join(', ')}`, time: Date.now() },
               ],
             };
           }
           return e;
         });
-      };
-      setListening(c);
-      emittingEvent.setListeningEvents(c);
-    });
-    setNewListen({ eventName: "" });
-
-	// update the local storage
-	const old = JSON.parse(localStorage.getItem("listeningEvents") || "[]");
-	localStorage.setItem(
-		"listeningEvents",
-		JSON.stringify([...old, { eventName: newListen.eventName, logged: [] }])
-	);
-  };
-
-  // attach event listener to the event from localstorage
-  React.useEffect(() => {
-	// listening already has the events stored in local storage from mother component
-	// so we don't need to add them again
-	console.log(`Pre Loading events: ${listening.length}`)
-	listening.forEach((l) => {
-    // ensure that the event is not already attached
-    if (!socket.listeners(l.eventName).length) {
-      console.log(`Event ${l.eventName} was preLoaded`)
-      socket.on(l.eventName, (data) => {
-        console.log(`Received event: ${l.eventName}`, data);
-        const c = (
-          prev: {
-            eventName: string;
-            logged: { message: string; time: number }[];
-          }[]
-        ) => {
-          return prev.map((e) => {
-            if (e.eventName === l.eventName) {
-              return {
-                ...e,
-                logged: [
-                  ...e.logged,
-                  { message: JSON.stringify(data), time: Date.now() },
-                ],
-              };
-            }
-            return e;
-          });
-        };
-        setListening(c);
-        emittingEvent.setListeningEvents(c);
-      });
-   }
-	});
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+      }
+      emittingEvent.setListeningEvents(commonSetter)
+    }
+   });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
- /* React.useEffect(() => {
-    // load the events from local storage
-    const storedEvents = localStorage.getItem("listeningEvents");
-	// need to set to state and attach a event
-	if (storedEvents) {
-		try {
-			const d = JSON.parse(storedEvents);
-			setListening(d);
-			emittingEvent.setListeningEvents(d);
-		}
-		catch {}
-	}
-  }, []);*/
 
   return (
     <Stack spacing={2} direction="column">
@@ -657,10 +682,21 @@ function ListenTab({
               ),
             }}
           />
+          <FormControlLabel
+              control={
+                <Switch
+                  checked={viewHidden}
+                  onClick={() =>
+                    setHidden((prev: boolean) => !prev)
+                  }
+                />
+              }
+              label={`Hidden events`}
+            />
       </Stack>
       <Typography color="green">Listening Events</Typography>
-      <Box sx={{ overflowY: "auto", height: "300px" }}>
-        {listening.map((event, index) => (
+      <Box sx={{ overflowY: "auto" }}>
+        {emittingEvent.listeningEvents.map((event, index) => event.hidden ? null : (
           <Box key={index} sx={{ borderBottom: 1, borderColor: "divider" }}>
             <Box sx={{ display: "flex", alignItems: "center" }}>
               <Typography>{event.eventName}</Typography>
@@ -671,6 +707,8 @@ function ListenTab({
                     event: event.eventName,
                     open: true,
                     logged: event.logged,
+                    hidden: event.hidden,
+                    id: event.id
                   });
                 }}
               >
@@ -683,12 +721,8 @@ function ListenTab({
                   const old = JSON.parse(localStorage.getItem("listeningEvents") || "[]");
                   const newEvents = old.filter((e: { eventName: string }) => e.eventName !== event.eventName);
                   localStorage.setItem("listeningEvents", JSON.stringify(newEvents));
-                  socket.off(event.eventName);
-                  setListening((prev) =>
-                    prev.filter((e) => e.eventName !== event.eventName)
-                  );
                   emittingEvent.setListeningEvents((prev: any) =>
-                    prev.filter((e: any) => e.eventName !== event.eventName)
+                    prev.filter((e: any) => e.id !== event.id)
                   );
                 }}
               >
@@ -698,6 +732,46 @@ function ListenTab({
           </Box>
         ))}
       </Box>
+      <Stack spacing={2} direction="column">
+        <Typography color={viewHidden ? 'green' : 'grey'}>Hidden Events - [{viewHidden ? 'Enabled' : 'Disabled'}]<Tooltip title="Events that you did not attach a listener but was received by the client"><HelpCenterIcon /></Tooltip></Typography>
+          <Box sx={{ overflowY: "auto" }}>
+                {viewHidden && emittingEvent.listeningEvents.map((event, index) => event.hidden ? (
+                    <Box key={index} sx={{ borderBottom: 1, borderColor: "divider" }}>
+                      <Box sx={{ display: "flex", alignItems: "center" }}>
+                        <Typography>{event.eventName}</Typography>
+                        <Box sx={{ flexGrow: 1 }} />
+                                <Button
+                                    onClick={() => {
+                                      setListeningEvent({
+                                        event: event.eventName,
+                                        open: true,
+                                        logged: event.logged,
+                                        hidden: event.hidden,
+                                        id: event.id
+                                      });
+                                    }}
+                                  >
+                          Inspect
+                            </Button>
+                            <Button
+                                color="error"
+                                onClick={() => {
+                                  // remove the event from local storage
+                                  const old = JSON.parse(localStorage.getItem("listeningEvents") || "[]");
+                                  const newEvents = old.filter((e: { eventName: string }) => e.eventName !== event.eventName);
+                                  localStorage.setItem("listeningEvents", JSON.stringify(newEvents));
+                                  emittingEvent.setListeningEvents((prev: any) =>
+                                    prev.filter((e: any) => e.id !== event.id)
+                                  );
+                                }}
+                              >
+                          Remove
+                            </Button>
+                      </Box>
+                    </Box>
+                ) : null)}
+          </Box>
+      </Stack>
       <Dialog
         open={ListeningEventInspector.open}
         onClose={() => setListeningEvent((prev) => ({ ...prev }))}
@@ -707,7 +781,9 @@ function ListenTab({
         <DialogContent>
           <Stack spacing={2} direction="column">
             <Typography>Event: {ListeningEventInspector.event}</Typography>
-
+            <Typography>Logged: {ListeningEventInspector.logged.length}</Typography>
+            <Typography>Event id: {ListeningEventInspector.id}</Typography>
+            <Typography>Hidden Event: {ListeningEventInspector.hidden ? 'This is a hidden event' : 'This is a Event Attached by you'}</Typography>
             <Typography>Data:</Typography> 
             <Button 
               color="error"
@@ -731,17 +807,6 @@ function ListenTab({
                   ...ListeningEventInspector,
                   logged: [],
                 });
-                setListening((prev) => {
-                  return prev.map((e) => {
-                    if (e.eventName === ListeningEventInspector.event) {
-                      return {
-                        ...e,
-                        logged: [],
-                      };
-                    }
-                    return e;
-                  });
-                })
                 emittingEvent.setListeningEvents((prev: any) => {
                   return prev.map((e: { eventName: string; logged: {}[] }) => {
                     if (e.eventName === ListeningEventInspector.event) {
@@ -771,7 +836,6 @@ function ListenTab({
                     variant="caption"
                     sx={{ width: "38%", flexShrink: 0 }}
                   >
-                    {/* format time here it in milliseconds from Date.now() */}
                     {new Date(log.time).toLocaleString()}
                   </Typography>
                   <Typography sx={{ color: "text.secondary" }}>

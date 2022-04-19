@@ -14,7 +14,7 @@
 
 > For a normal user the online version is available
 
-> 
+> https://typicalninja493.github.io/socket.io-client/
 
 ### Installation
 
