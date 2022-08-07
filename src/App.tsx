@@ -5,6 +5,8 @@ import Connect from './components/Connect';
 import Connecting from './components/Connecting';
 import Error from './components/Error';
 import Connection from './components/Connection';
+import Disconnected from './components/Disconnected';
+
 
 import Box from '@mui/material/Box';
 
@@ -130,6 +132,14 @@ class App extends React.Component {
       //socket.removeAllListeners()
     });
 
+    socket.on('disconnect', (err: any) => {
+      console.log(`MAIN :: disconnect: ${err}`)
+      this.setState({
+        status: CONN_STATES.DISCONNECTED,
+        error: err.message || 'Unknown error'
+      });
+    });
+
   }
   error_OnBack() {
     // set most to previous values
@@ -166,6 +176,10 @@ class App extends React.Component {
           <Connecting {...this.state} />
         }
         {
+          this.state.status === CONN_STATES.DISCONNECTED &&
+          <Disconnected {...this.state} onBack={this.error_OnBack.bind(this)} onConnectClick={this.connect.bind(this)} setOptions={this.setOptions.bind(this)} setUri={this.setUri.bind(this)} />
+        }
+        {
           // next is Error and is shown when the connection failed
           this.state.status === CONN_STATES.ERROR &&
           <Error {...this.state} onBack={this.error_OnBack.bind(this)} />
@@ -173,7 +187,8 @@ class App extends React.Component {
         {
           // next is connected and is shown when the connection is successful
           this.state.status === CONN_STATES.CONNECTED &&
-          <Connection {...this.state} />
+          // @ts-ignore
+          <Connection {...this.state} onBack={this.error_OnBack.bind(this)} />
         }
       </Box>
     );

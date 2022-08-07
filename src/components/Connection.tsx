@@ -28,7 +28,7 @@ import { json } from "@codemirror/lang-json";
 
 import AddIcon from "@mui/icons-material/Add";
 import { Socket } from "socket.io-client";
-import { stringify } from "querystring";
+
 
 import { nanoid } from 'nanoid'
 
@@ -81,6 +81,13 @@ function ConnectionInfo(props: State) {
             {props.uri}
           </a>
         </Typography>
+        {/* @ts-ignore */}
+        <Button color="error" onClick={() => props.onBack()}>
+          <Typography variant="button" color={"error"}>
+              Disconnect
+          </Typography>
+        </Button>
+
         <Typography>Connection Settings</Typography>
         <CodeMirror
           value={JSON.stringify(props.ioOptions, null, 2)}

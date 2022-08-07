@@ -1,7 +1,7 @@
 {
   "files": {
     "main.css": "/socket.io-client/static/css/main.ead374ea.css",
-    "main.js": "/socket.io-client/static/js/main.017e42f9.js",
+    "main.js": "/socket.io-client/static/js/main.07aa74cc.js",
     "static/media/roboto-all-500-normal.woff": "/socket.io-client/static/media/roboto-all-500-normal.52cb737b682eb9661ee1.woff",
     "static/media/roboto-all-700-normal.woff": "/socket.io-client/static/media/roboto-all-700-normal.ef6d1d09b20b877fee4e.woff",
     "static/media/roboto-all-400-normal.woff": "/socket.io-client/static/media/roboto-all-400-normal.376ea5d93f71583052f6.woff",
@@ -36,10 +36,10 @@
     "static/media/roboto-greek-ext-700-normal.woff2": "/socket.io-client/static/media/roboto-greek-ext-700-normal.9674bc0ae12c2551d9d1.woff2",
     "index.html": "/socket.io-client/index.html",
     "main.ead374ea.css.map": "/socket.io-client/static/css/main.ead374ea.css.map",
-    "main.017e42f9.js.map": "/socket.io-client/static/js/main.017e42f9.js.map"
+    "main.07aa74cc.js.map": "/socket.io-client/static/js/main.07aa74cc.js.map"
   },
   "entrypoints": [
     "static/css/main.ead374ea.css",
-    "static/js/main.017e42f9.js"
+    "static/js/main.07aa74cc.js"
   ]
 }

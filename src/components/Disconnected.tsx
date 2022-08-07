@@ -7,21 +7,22 @@ import Typography from '@mui/material/Typography';
 import Button from '@mui/material/Button';
 import Stack from '@mui/material/Stack';
 
-export default function Error({ error, onBack }: { error: string | null; onBack: any }) {
+export default function Error({ error, onBack, onConnectClick, setOptions, setUri }: { error: string | null; onBack: any; onConnectClick: any, setOptions: any, setUri: any; }) {
 	if(!error) return null;
 	return (
 		<Dialog open={true} onClose={() => null} fullWidth>
-			<DialogTitle>Error Occurred</DialogTitle>
+			<DialogTitle>Disconnected</DialogTitle>
 			<DialogContent>
 				<DialogContentText>
 					<Stack direction="column" spacing={1}>
 						<Typography variant="body1" color="success">
-							If socket.io can Reconnect to the server you will be sent back to connection controls page.
+							The socket.io connection has been lost.
 							{" "}
-							To Exit and close all connections Click <Typography color="success">"Back to Connect"</Typography>
-						</Typography>
-						<Typography variant="caption" color="error">
-							{error}
+							If we can Reconnect to the server you will be sent back to connection controls page.
+							{" "}
+							To Exit and close all connections Click <b>"Back to Connect"</b>
+							{" "}
+							Or Click <b>"Try Again"</b> to reconnect.
 						</Typography>
 					</Stack>
 				</DialogContentText>
@@ -30,6 +31,11 @@ export default function Error({ error, onBack }: { error: string | null; onBack:
 				<Button onClick={onBack}>
 					<Typography variant="button">
 						Back to Connect
+					</Typography>
+				</Button>
+				<Button onClick={onConnectClick}>
+					<Typography variant="button" color={"success"}>
+						Try Again
 					</Typography>
 				</Button>
 			</DialogActions>
